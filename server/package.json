@@ -22,6 +22,7 @@
     "express": "^4.17.3",
     "forever": "^4.0.1",
     "node-color-log": "^9.0.0",
+    "sharp": "^0.30.4",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
