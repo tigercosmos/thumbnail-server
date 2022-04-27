@@ -1,12 +1,53 @@
 const express = require('express')
 const { Worker, parentPort } = require('worker_threads');
 const amqplib = require('amqplib');
+const { v4: uuid } = require('uuid');
 
 const config = require("./config");
 
 const app = express()
 
 const { createClient } = require('redis');
+
+async function init_workers(thread_num, params) {
+
+    return new Promise((resolve, reject) => {
+        function handleWorker(thread_id) {
+            return new Promise((resolve, reject) => {
+                // create worker, do stuff
+                const worker = new Worker("./worker.js");
+
+                params["thread_id"] = thread_id;
+                worker.postMessage(params);
+
+                worker.on("message", function (e) {
+                    resolve(worker);
+                });
+
+                worker.on("error", function (err) {
+                    reject(err)
+                });
+
+            })
+        }
+
+        var workers = [];
+
+        for (var i = 0; i < thread_num; i++) {
+            workers.push(handleWorker(i))
+        }
+
+        Promise.all(workers)
+            .then(res => {
+                console.log("all workers started")
+                resolve(res);
+            })
+            // handle error
+            .catch(err => {
+                reject(err)
+            });
+    });
+}
 
 (async () => {
     const redis_cli = createClient(
@@ -16,43 +57,30 @@ const { createClient } = require('redis');
 
     const mq_conn = await amqplib.connect('amqp://rabbit:5672');
 
+    const workers = await init_workers(1, {
+        cmd: "start"
+    });
 
     var ch = await mq_conn.createChannel();
 
     await ch.assertQueue(config.mq);
-
-    ch.sendToQueue(config.mq, Buffer.from('something to do'));
-    ch.sendToQueue(config.mq, Buffer.from('something to do'));
-    ch.sendToQueue(config.mq, Buffer.from('something to do'));
-    ch.sendToQueue(config.mq, Buffer.from('something to do'));
-
-
 
     app.get('/', (req, res) => {
         res.send('Hello World!')
     })
 
     app.get('/api', async (req, res) => {
-        console.log("DDD")
-        await redis_cli.set('key', 'value');
-        const value = await redis_cli.get('key');
-        console.log("XX", value)
+        const id = uuid();
 
-        var onmsg = function (msg) {
-            if (msg !== null) {
-                console.log(msg.content.toString());
-                ch.ack(msg);
-            }
-        }
+        console.log("[GET] task id:", id)
+        await redis_cli.set(id, {
+            status: "in_process",
+            image: null
+        });
 
-        try {
-            ch.consume(config.mq, onmsg);
-        } catch (e) {
-            console.error(e)
-        }
+        ch.sendToQueue(config.mq, Buffer.from(id));
 
-        res.send('Hello World!!!!!')
-
+        res.status(202).send({ status: "in_process", url: `/check/${id}` });
     })
 
     app.listen(config.port, () => {
