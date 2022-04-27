@@ -49,7 +49,7 @@ async function init_workers(thread_num, params) {
     });
 }
 
-(async () => {
+async function main() {
     const redis_cli = createClient(
         { url: 'redis://redis:6379' });
     redis_cli.on('error', (err) => console.log('Redis Client Error', err));
@@ -102,12 +102,18 @@ async function init_workers(thread_num, params) {
         }
     })
 
-    app.listen(config.port, () => {
+    const server = app.listen(config.port, () => {
         console.log(`Example app listening on port ${config.port}`)
     })
-})();
+
+    return server;
+}
 
 async function wait(t) {
     await new Promise(resolve => setTimeout(resolve, t));
     return;
 }
+
+const server = main();
+
+module.exports = { app, server };
