@@ -16,7 +16,7 @@ services:
     command: sh -c './wait-for-it.sh rabbitmq:5672 --timeout=30 -- node main.js'
 
   redis:
-    image: redis
+    image: redislabs/rejson:latest
     container_name: redis
     ports:
       - "6379:6379"

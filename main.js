@@ -73,14 +73,33 @@ async function init_workers(thread_num, params) {
         const id = uuid();
 
         console.log("[GET] task id:", id)
-        await redis_cli.set(id, {
+        await redis_cli.json.set(id, ".", {
             status: "in_process",
-            image: null
+            origin_image: null,
+            new_image: null
         });
 
         ch.sendToQueue(config.mq, Buffer.from(id));
 
         res.status(202).send({ status: "in_process", url: `/check/${id}` });
+    })
+
+    app.get('/check/:id', async (req, res) => {
+        const task_id = req.params.id;
+
+        console.log("[GET] /check task id:", task_id)
+
+        const content = await redis_cli.json.get(task_id, {
+            path: '.'
+        });
+
+        if (content.status == "in_process") {
+            res.status(202).send({ status: "in_process", url: `/check/${id}` });
+        } else if (content.status == "done") {
+            res.status(200).send({ status: "done", image: content.new_image });
+        } else {
+            res.status(404).send({ status: "not_found" });
+        }
     })
 
     app.listen(config.port, () => {
