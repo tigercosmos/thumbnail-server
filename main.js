@@ -71,21 +71,25 @@ async function main() {
     })
 
     app.post('/api', upload.single("image"), async (req, res) => {
-        const id = uuid();
+        try {
+            const id = uuid();
 
-        // TODO: error handling
-        const file_base64 = req.file.buffer.toString('base64');
+            // TODO: error handling
+            const file_base64 = req.file.buffer.toString('base64');
 
-        console.log("[GET] task id:", id)
-        await redis_cli.json.set(id, ".", {
-            status: "in_process",
-            original_image: file_base64,
-            new_image: null
-        });
+            console.log("[GET] task id:", id)
+            await redis_cli.json.set(id, ".", {
+                status: "in_process",
+                original_image: file_base64,
+                new_image: null
+            });
 
-        ch.sendToQueue(config.mq, Buffer.from(id));
+            ch.sendToQueue(config.mq, Buffer.from(id));
 
-        res.status(202).send({ status: "in_process", url: `/check/${id}` });
+            res.status(202).send({ status: "in_process", url: `/check/${id}` });
+        } catch (e) {
+            res.status(500).send("error");
+        }
     })
 
     app.get('/check/:id', async (req, res) => {
@@ -97,12 +101,14 @@ async function main() {
             path: '.'
         });
 
-        if (content.status == "in_process") {
+        if (!content) {
+            res.status(404).send({ status: "not_found" });
+        } else if (content.status == "in_process") {
             res.status(202).send({ status: "in_process", url: `/check/${id}` });
         } else if (content.status == "done") {
             res.status(200).send({ status: "done", image: content.new_image });
         } else {
-            res.status(404).send({ status: "not_found" });
+            res.status(500).send({ status: "unknown_error" });
         }
     })
 
