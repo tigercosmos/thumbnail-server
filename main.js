@@ -58,7 +58,7 @@ async function main() {
 
     const mq_conn = await amqplib.connect('amqp://rabbit:5672');
 
-    const workers = await init_workers(1, {
+    const workers = await init_workers(config.worker_num, {
         cmd: "start"
     });
 
