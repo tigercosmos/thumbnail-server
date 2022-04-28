@@ -3,6 +3,7 @@ const { parentPort } = require('worker_threads');
 const amqplib = require('amqplib');
 const config = require("./config");
 const { createClient } = require('redis');
+const sharp = require("sharp");
 
 let thread_id;
 
@@ -31,13 +32,32 @@ let thread_id;
         }
     });
 
+    async function image_process(encode_buffer) {
+
+        let output;
+        try {
+            const file = Buffer.from(encode_buffer, 'base64');
+
+            output = await sharp(file)
+                .resize(100, 100)
+                .png()
+                .toBuffer();
+        } catch (e) {
+            console.error(e)
+        }
+
+        return "data:image/png;base64," + output.toString('base64');
+    }
+
     async function do_task(task_id) {
         const content = await redis_cli.json.get(task_id, {
             path: '.'
         });
 
+        encode_image = await image_process(content.original_image);
+
         content.status = "done";
-        content.new_image = "new_image";
+        content.new_image = encode_image;
 
         await redis_cli.json.set(task_id, ".", content);
     }

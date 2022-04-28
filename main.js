@@ -2,6 +2,7 @@ const express = require('express')
 const { Worker, parentPort } = require('worker_threads');
 const amqplib = require('amqplib');
 const { v4: uuid } = require('uuid');
+const upload = require("./uploadMiddleware");
 
 const config = require("./config");
 
@@ -69,13 +70,16 @@ async function main() {
         res.send('Hello World!')
     })
 
-    app.get('/api', async (req, res) => {
+    app.post('/api', upload.single("image"), async (req, res) => {
         const id = uuid();
+
+        // TODO: error handling
+        const file_base64 = req.file.buffer.toString('base64');
 
         console.log("[GET] task id:", id)
         await redis_cli.json.set(id, ".", {
             status: "in_process",
-            origin_image: null,
+            original_image: file_base64,
             new_image: null
         });
 
