@@ -28,9 +28,9 @@ describe('Integration tests', function () {
 
   let check_url;
 
-  it('post /api', function (done) {
+  it('post /upload', function (done) {
     request
-      .post('/api')
+      .post('/upload')
       .attach('image', './image.jpg')
       .expect(202)
       .end((err, res) => {

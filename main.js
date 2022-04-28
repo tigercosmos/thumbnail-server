@@ -70,7 +70,7 @@ async function main() {
         res.send('Hello World!')
     })
 
-    app.post('/api', upload.single("image"), async (req, res) => {
+    app.post('/upload', upload.single("image"), async (req, res) => {
         try {
             const id = uuid();
 
