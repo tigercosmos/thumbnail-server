@@ -88,7 +88,7 @@ async function main() {
 
             res.status(202).send({ status: "in_process", url: `/check/${id}` });
         } catch (e) {
-            res.status(500).send("error");
+            res.status(500).send({ status: "server_error" });
         }
     })
 
@@ -108,7 +108,7 @@ async function main() {
         } else if (content.status == "done") {
             res.status(200).send({ status: "done", image: content.new_image });
         } else {
-            res.status(500).send({ status: "unknown_error" });
+            res.status(500).send({ status: "server_error" });
         }
     })
 
