@@ -6,6 +6,7 @@ services:
       - "8080:8080"
     volumes:
       - .:/usr/src/app
+      - node_modules:/usr/src/app/node_modules
       - logvolume01:/var/log
     depends_on:
       - rabbitmq
@@ -13,7 +14,7 @@ services:
     links:
       - rabbitmq
       - redis
-    command: sh -c './wait-for-it.sh rabbitmq:5672 --timeout=30 -- npm test'
+    command:  sh -c './wait-for-it.sh rabbitmq:5672 --timeout=30 -- npm test'
 
   redis:
     image: redislabs/rejson:latest
@@ -31,3 +32,4 @@ services:
 
 volumes:
   logvolume01: {}
+  node_modules:
