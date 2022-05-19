@@ -19,7 +19,7 @@ let thread_id;
 
     await ch.assertQueue(config.mq);
 
-    parentPort.once('message', (message) => {
+    parentPort.on('message', (message) => {
 
         if (message.cmd == "start") {
             thread_id = message.thread_id;
@@ -32,18 +32,20 @@ let thread_id;
         }
     });
 
-    async function image_process(encode_buffer) {
+    async function image_process(encode_buffer, length) {
 
         let output;
+
         try {
             const file = Buffer.from(encode_buffer, 'base64');
 
             output = await sharp(file)
-                .resize(100, 100)
+                .resize(length, length)
                 .png()
                 .toBuffer();
         } catch (e) {
             console.error(e)
+            return "";
         }
 
         return "data:image/png;base64," + output.toString('base64');
@@ -54,10 +56,14 @@ let thread_id;
             path: '.'
         });
 
-        encode_image = await image_process(content.original_image);
+        encode_image = await image_process(content.original_image, content.length);
 
-        content.status = "done";
-        content.new_image = encode_image;
+        if(encode_image == "") {
+            content.status = "failed";
+        } else {
+            content.status = "done";
+            content.new_image = encode_image;
+        }
 
         await redis_cli.json.set(task_id, ".", content);
     }
@@ -69,7 +75,11 @@ let thread_id;
                     const id = msg.content.toString();
                     console.log(`worker ${thread_id} processes the task ${id}`);
 
-                    await do_task(id);
+                    try {
+                        await do_task(id);
+                    } catch (e) {
+                        console.error(e)
+                    }
                     ch.ack(msg);
                     console.log(`worker ${thread_id} finished the task ${id}`);
                 }

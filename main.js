@@ -75,10 +75,13 @@ async function main() {
             const id = uuid();
 
             // TODO: error handling
+            let length = req.body.length;
+
             const file_base64 = req.file.buffer.toString('base64');
 
             console.log("[GET] task id:", id)
             await redis_cli.json.set(id, ".", {
+                length: Number(length),
                 status: "in_process",
                 original_image: file_base64,
                 new_image: null
@@ -100,11 +103,13 @@ async function main() {
         const content = await redis_cli.json.get(task_id, {
             path: '.'
         });
-
         if (!content) {
             res.status(404).send({ status: "not_found" });
-        } else if (content.status == "in_process") {
-            res.status(202).send({ status: "in_process", url: `/check/${id}` });
+        } else if (content.status == "failed") {
+            res.status(500).send({ status: "failed" });
+        }
+         else if (content.status == "in_process") {
+            res.status(202).send({ status: "in_process", url: `/check/${task_id}` });
         } else if (content.status == "done") {
             res.status(200).send({ status: "done", image: content.new_image });
         } else {
