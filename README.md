@@ -47,7 +47,7 @@ Run the server at localhost, and use the other shell to run:
 
 ```sh
 # POST /upload
-$ curl -X POST  -H "Content-Type: multipart/form-data"  -F image=@image.jpg http://localhost:8080/upload
+$ curl -X POST  -H "Content-Type: multipart/form-data" -F length=200 -F image=@image.jpg http://localhost:8080/upload
 {"status":"in_process","url":"/check/617d334a-d277-4351-912a-ff3a9aac8e6f"}
 
 # GET /check/:id
